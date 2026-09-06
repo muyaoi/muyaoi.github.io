@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="250" viewBox="0 0 920 250" font-family="'Microsoft YaHei','PingFang SC',sans-serif">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b6b7c"/>
+    </marker>
+  </defs>
+  <rect width="920" height="250" fill="#f8fafc" rx="12"/>
+  <text x="460" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#2c3e50">非 Console 登录配置流程</text>
+
+  <!-- 五个步骤 -->
+  <g font-size="13">
+    <rect x="30" y="70" width="150" height="90" rx="10" fill="#ffffff" stroke="#49b1f5" stroke-width="2"/>
+    <circle cx="105" cy="96" r="13" fill="#49b1f5"/>
+    <text x="105" y="101" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">1</text>
+    <text x="105" y="126" text-anchor="middle" fill="#2c3e50" font-weight="bold">Console 首登</text>
+    <text x="105" y="146" text-anchor="middle" fill="#7f8c9b">admin / Admin@123</text>
+
+    <rect x="210" y="70" width="150" height="90" rx="10" fill="#ffffff" stroke="#49b1f5" stroke-width="2"/>
+    <circle cx="285" cy="96" r="13" fill="#49b1f5"/>
+    <text x="285" y="101" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">2</text>
+    <text x="285" y="126" text-anchor="middle" fill="#2c3e50" font-weight="bold">接口配 IP</text>
+    <text x="285" y="146" text-anchor="middle" fill="#7f8c9b">+ service-manage</text>
+
+    <rect x="390" y="70" width="150" height="90" rx="10" fill="#ffffff" stroke="#49b1f5" stroke-width="2"/>
+    <circle cx="465" cy="96" r="13" fill="#49b1f5"/>
+    <text x="465" y="101" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">3</text>
+    <text x="465" y="126" text-anchor="middle" fill="#2c3e50" font-weight="bold">安全策略放行</text>
+    <text x="465" y="146" text-anchor="middle" fill="#7f8c9b">trust → local</text>
+
+    <rect x="570" y="70" width="150" height="90" rx="10" fill="#ffffff" stroke="#49b1f5" stroke-width="2"/>
+    <circle cx="645" cy="96" r="13" fill="#49b1f5"/>
+    <text x="645" y="101" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">4</text>
+    <text x="645" y="126" text-anchor="middle" fill="#2c3e50" font-weight="bold">创建登录账号</text>
+    <text x="645" y="146" text-anchor="middle" fill="#7f8c9b">aaa + vty</text>
+
+    <rect x="750" y="70" width="150" height="90" rx="10" fill="#e8f6ff" stroke="#1683d0" stroke-width="2.5"/>
+    <circle cx="825" cy="96" r="13" fill="#1683d0"/>
+    <text x="825" y="101" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">5</text>
+    <text x="825" y="126" text-anchor="middle" fill="#2c3e50" font-weight="bold">远程登录</text>
+    <text x="825" y="146" text-anchor="middle" fill="#1683d0" font-weight="bold">Web / SSH / Telnet</text>
+  </g>
+
+  <line x1="180" y1="115" x2="210" y2="115" stroke="#5b6b7c" stroke-width="2.5" marker-end="url(#arr2)"/>
+  <line x1="360" y1="115" x2="390" y2="115" stroke="#5b6b7c" stroke-width="2.5" marker-end="url(#arr2)"/>
+  <line x1="540" y1="115" x2="570" y2="115" stroke="#5b6b7c" stroke-width="2.5" marker-end="url(#arr2)"/>
+  <line x1="720" y1="115" x2="750" y2="115" stroke="#5b6b7c" stroke-width="2.5" marker-end="url(#arr2)"/>
+
+  <text x="460" y="205" text-anchor="middle" font-size="13" fill="#7f8c9b">其中 2、3 两步最容易遗漏——漏掉任何一步，管理流量都会被防火墙自己挡掉</text>
+</svg>

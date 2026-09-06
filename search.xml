@@ -30,6 +30,13 @@
 <li>真实主机上准备浏览器（Edge &#x2F; Chrome 均可）和 SSH 客户端（PuTTY &#x2F; Windows Terminal 的 ssh 命令）</li>
 </ul>
 <p>USG6000V 的管理口 <strong>GE0&#x2F;0&#x2F;0</strong> 出厂自带 IP <code>192.168.0.1/24</code>，默认账号 <code>admin</code>，密码 <code>Admin@123</code>，首次登录强制改密。</p>
+<p><img src="/posts/ensp-firewall-remote-login/topo.svg" alt="eNSP 远程管理防火墙实验拓扑"></p>
+<!-- TODO(截图)：把你在 eNSP 里搭好的拓扑截图存为
+     source/_posts/ensp-firewall-remote-login/topo-lab.png
+     然后取消下面这行的注释即可替换上面的示意图
+![eNSP 实际拓扑](/posts/ensp-firewall-remote-login/topo-lab.png) -->
+
+
 <div class="note info flat"><p>Console 口首次登录后系统会要求设置新密码，新密码必须满足复杂度：大写+小写+数字+特殊字符，且不含连续三个以上相同字符。</p>
 </div>
 
@@ -39,6 +46,7 @@
 <li><strong>放行安全策略</strong>——防火墙默认拒绝一切跨域流量，包括发往自身的管理流量（trust → local）</li>
 <li><strong>开启对应的服务并创建登录账号</strong>（Web &#x2F; SSH &#x2F; Telnet 各一套）</li>
 </ol>
+<p><img src="/posts/ensp-firewall-remote-login/flow.svg" alt="非 Console 登录配置流程"></p>
 <h2 id="三、方式一：Web-界面登录"><a href="#三、方式一：Web-界面登录" class="headerlink" title="三、方式一：Web 界面登录"></a>三、方式一：Web 界面登录</h2><p>Web 登录依赖默认管理口，真实主机需与 GE0&#x2F;0&#x2F;0 同网段。在 eNSP 中用 Cloud 桥接主机网卡（UDP 或桥头绑定真实 NIC），主机 IP 配成 <code>192.168.0.2/24</code>，然后浏览器访问：</p>
 <figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">https://192.168.0.1:8443</span><br></pre></td></tr></table></figure>
 
