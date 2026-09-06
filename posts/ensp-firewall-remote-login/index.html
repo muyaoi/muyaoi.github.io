@@ -1,0 +1,289 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>eNSP 配置华为防火墙的非 Console 口登录 | 沐爻</title><meta name="author" content="沐爻"><meta name="copyright" content="沐爻"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="USG6000V 开启 Web &#x2F; SSH &#x2F; Telnet 三种远程管理的完整配置流程与踩坑记录">
+<meta property="og:type" content="article">
+<meta property="og:title" content="eNSP 配置华为防火墙的非 Console 口登录">
+<meta property="og:url" content="https://muyaoi.github.io/posts/ensp-firewall-remote-login/index.html">
+<meta property="og:site_name" content="沐爻">
+<meta property="og:description" content="USG6000V 开启 Web &#x2F; SSH &#x2F; Telnet 三种远程管理的完整配置流程与踩坑记录">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://muyaoi.github.io/img/avatar.jpg">
+<meta property="article:published_time" content="2026-09-06T03:30:00.000Z">
+<meta property="article:modified_time" content="2026-09-06T03:23:45.635Z">
+<meta property="article:author" content="沐爻">
+<meta property="article:tag" content="华为">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://muyaoi.github.io/img/avatar.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "eNSP 配置华为防火墙的非 Console 口登录",
+  "url": "https://muyaoi.github.io/posts/ensp-firewall-remote-login/",
+  "image": "https://muyaoi.github.io/img/avatar.jpg",
+  "datePublished": "2026-09-06T03:30:00.000Z",
+  "dateModified": "2026-09-06T03:23:45.635Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "沐爻",
+      "url": "https://muyaoi.github.io"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://muyaoi.github.io/posts/ensp-firewall-remote-login/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.0"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'eNSP 配置华为防火墙的非 Console 口登录',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">2</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-heart"></i><span> 个人</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/love/"><i class="fa-fw fas fa-music"></i><span> 情感小屋</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 视频主页</span></a></li></ul></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg fixed" id="page-header" style="background-image: url(/img/topimg.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">沐爻</span></a><a class="nav-page-title" href="/"><span class="site-name">eNSP 配置华为防火墙的非 Console 口登录</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> 友链</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fas fa-heart"></i><span> 个人</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/love/"><i class="fa-fw fas fa-music"></i><span> 情感小屋</span></a></li><li><a class="site-page child" href="/movies/"><i class="fa-fw fas fa-video"></i><span> 视频主页</span></a></li></ul></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">eNSP 配置华为防火墙的非 Console 口登录</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-09-06T03:30:00.000Z" title="发表于 2026-09-06 11:30:00">2026-09-06</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-09-06T03:23:45.635Z" title="更新于 2026-09-06 11:23:45">2026-09-06</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>防火墙出厂默认只开放 Console 口，业务口全部处于关闭状态——这是它与路由器、交换机最大的区别。想通过 <strong>Web、SSH、Telnet</strong> 这些”非 Console”方式登录管理，必须先用 Console（或默认管理口）完成一轮初始化配置。本文记录在 eNSP 中用 USG6000V 完成这一过程的完整步骤。</p>
+<span id="more"></span>
+
+<h2 id="一、环境准备"><a href="#一、环境准备" class="headerlink" title="一、环境准备"></a>一、环境准备</h2><ul>
+<li>eNSP（需自行加载 <strong>USG6000V 设备包</strong>，否则防火墙启动报 40 错误）</li>
+<li>一台 USG6000V、一个 Cloud（云）设备用于桥接真实主机网卡</li>
+<li>真实主机上准备浏览器（Edge &#x2F; Chrome 均可）和 SSH 客户端（PuTTY &#x2F; Windows Terminal 的 ssh 命令）</li>
+</ul>
+<p>USG6000V 的管理口 <strong>GE0&#x2F;0&#x2F;0</strong> 出厂自带 IP <code>192.168.0.1/24</code>，默认账号 <code>admin</code>，密码 <code>Admin@123</code>，首次登录强制改密。</p>
+<div class="note info flat"><p>Console 口首次登录后系统会要求设置新密码，新密码必须满足复杂度：大写+小写+数字+特殊字符，且不含连续三个以上相同字符。</p>
+</div>
+
+<h2 id="二、思路"><a href="#二、思路" class="headerlink" title="二、思路"></a>二、思路</h2><p>非 Console 登录的本质是三件事：</p>
+<ol>
+<li><strong>给接口配 IP</strong> 并开启该接口的管理服务（<code>service-manage</code>）</li>
+<li><strong>放行安全策略</strong>——防火墙默认拒绝一切跨域流量，包括发往自身的管理流量（trust → local）</li>
+<li><strong>开启对应的服务并创建登录账号</strong>（Web &#x2F; SSH &#x2F; Telnet 各一套）</li>
+</ol>
+<h2 id="三、方式一：Web-界面登录"><a href="#三、方式一：Web-界面登录" class="headerlink" title="三、方式一：Web 界面登录"></a>三、方式一：Web 界面登录</h2><p>Web 登录依赖默认管理口，真实主机需与 GE0&#x2F;0&#x2F;0 同网段。在 eNSP 中用 Cloud 桥接主机网卡（UDP 或桥头绑定真实 NIC），主机 IP 配成 <code>192.168.0.2/24</code>，然后浏览器访问：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://192.168.0.1:8443</span><br></pre></td></tr></table></figure>
+
+<p>输入 <code>admin / Admin@123</code>，按提示修改密码后进入 Web 管理台。后续接口 IP、安全策略、服务配置都可以直接在 Web 界面完成，比命令行直观。</p>
+<div class="note warning flat"><p>踩坑记录：浏览器提示”需授权 &#x2F; 无法认证或认证失败”，基本都是下面两种情况：</p>
+<ul>
+<li><strong>证书不受信任</strong>：USG 用的是自签名证书，点”高级 → 继续前往”即可；不要用 IE 内核兼容模式</li>
+<li><strong>首次登录未完成强制改密</strong>：不完成改密流程，任何后续 API&#x2F;页面请求都会被判定为未认证而失败</li>
+</ul>
+</div>
+
+<h2 id="四、方式二：SSH（Stelnet）登录——推荐"><a href="#四、方式二：SSH（Stelnet）登录——推荐" class="headerlink" title="四、方式二：SSH（Stelnet）登录——推荐"></a>四、方式二：SSH（Stelnet）登录——推荐</h2><p>先在 GE1&#x2F;0&#x2F;1 上起一个业务口作管理用（命令行以 Console 或 Web 登录后执行）：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">interface GigabitEthernet1/0/1</span><br><span class="line"> undo shutdown</span><br><span class="line"> ip address 10.1.1.1 24</span><br><span class="line"> service-manage enable</span><br><span class="line"> service-manage ping permit</span><br><span class="line"> service-manage ssh permit</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">firewall zone trust</span><br><span class="line"> add interface GigabitEthernet1/0/1</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">security-policy</span><br><span class="line"> rule name allow_mgmt</span><br><span class="line">  source-zone trust</span><br><span class="line">  destination-zone local</span><br><span class="line">  action permit</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+
+<details class="folding-tag" 蓝色><summary> 为什么必须配 service-manage 和 trust→local 策略 </summary>
+              <div class='content'>
+              <ul><li><code>service-manage enable</code> 开启后，该接口默认<strong>拒绝所有</strong>管理类流量（ping&#x2F;ssh&#x2F;telnet&#x2F;http），必须逐项 <code>permit</code></li><li>防火墙把”发给自己”的流量也归入安全策略检查（trust → local），不放行就连 ping 都不通</li><li>这两步是初学者最常漏掉的，表现为”接口 IP 配了、线也连了，就是不通”</li></ul>
+              </div>
+            </details>
+
+<p>然后开启 SSH 服务并创建登录账号：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">stelnet server enable</span><br><span class="line"></span><br><span class="line">aaa</span><br><span class="line"> manager-user muxiao</span><br><span class="line">  password cipher MuYao@123</span><br><span class="line">  level 3</span><br><span class="line">  service-type ssh</span><br><span class="line">quit</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">ssh user muxiao</span><br><span class="line"> ssh user muxiao authentication-type password</span><br><span class="line"> ssh user muxiao service-type stelnet</span><br><span class="line"></span><br><span class="line">user-interface vty 0 4</span><br><span class="line"> authentication-mode aaa</span><br><span class="line"> protocol inbound ssh</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+
+<p>真实主机（经 Cloud 桥接后 IP 为 10.1.1.2&#x2F;24）验证：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ssh muxiao@10.1.1.1</span><br></pre></td></tr></table></figure>
+
+<p>首次连接客户端会提示保存主机公钥（VRP V500 设备在开启 stelnet 时会自动生成本地密钥对），输入密码 <code>MuYao@123</code> 即进入命令行。</p>
+<h2 id="五、方式三：Telnet-登录"><a href="#五、方式三：Telnet-登录" class="headerlink" title="五、方式三：Telnet 登录"></a>五、方式三：Telnet 登录</h2><p>配置结构与 SSH 相同，把服务换成 telnet：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">telnet server enable</span><br><span class="line"></span><br><span class="line">interface GigabitEthernet1/0/1</span><br><span class="line"> service-manage telnet permit</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">aaa</span><br><span class="line"> manager-user muxiao</span><br><span class="line">  service-type telnet</span><br><span class="line">quit</span><br><span class="line">quit</span><br><span class="line"></span><br><span class="line">user-interface vty 0 4</span><br><span class="line"> protocol inbound telnet</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+
+<div class="note danger flat"><p>Telnet 全程明文传输，生产环境禁用，仅建议在 eNSP 实验中体验。</p>
+</div>
+
+<h2 id="六、常见问题速查"><a href="#六、常见问题速查" class="headerlink" title="六、常见问题速查"></a>六、常见问题速查</h2><table>
+<thead>
+<tr>
+<th>现象</th>
+<th>原因</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web 页面”无法认证或认证失败”</td>
+<td>自签名证书不被信任 &#x2F; 未完成首次改密</td>
+<td>继续前往；完成强制改密</td>
+</tr>
+<tr>
+<td>ping 不通防火墙接口</td>
+<td>未配 <code>service-manage ping permit</code></td>
+<td>接口下补配</td>
+</tr>
+<tr>
+<td>SSH 能连上但认证失败</td>
+<td>manager-user 密码复杂度不达标未生效</td>
+<td>重新设置满足复杂度的密码</td>
+</tr>
+<tr>
+<td>设备启动报 40 错误</td>
+<td>未加载 USG6000V 镜像包</td>
+<td>eNSP 里注册导入设备包</td>
+</tr>
+</tbody></table>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>记住三板斧：<strong>接口开服务（service-manage）→ 策略放行（trust→local）→ 服务端创建账号（aaa + vty）</strong>。三种非 Console 方式里，Web 适合看拓扑和调策略，SSH 适合日常命令行运维，Telnet 只在实验里玩玩就好。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://muyaoi.github.io">沐爻</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://muyaoi.github.io/posts/ensp-firewall-remote-login/">https://muyaoi.github.io/posts/ensp-firewall-remote-login/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://muyaoi.github.io" target="_blank">沐爻</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%8D%8E%E4%B8%BA/">华为</a></div><div class="post-share"><div class="social-share" data-image="/img/avatar.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/posts/hello-world/" title="Hello World"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Hello World</div></div><div class="info-2"><div class="info-item-1">Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick StartCreate a new post1$ hexo new &quot;My New Post&quot;  More info: Writing Run server1$ hexo server  More info: Server Generate static files1$ hexo generate  More info: Generating Deploy to remote sites1$ hexo deploy  More info: Deployment </div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">沐爻</div><div class="author-info-description">一个努力向上的计算机人</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">2</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">1</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="toc-number">1.</span> <span class="toc-text">一、环境准备</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%80%9D%E8%B7%AF"><span class="toc-number">2.</span> <span class="toc-text">二、思路</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9AWeb-%E7%95%8C%E9%9D%A2%E7%99%BB%E5%BD%95"><span class="toc-number">3.</span> <span class="toc-text">三、方式一：Web 界面登录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9ASSH%EF%BC%88Stelnet%EF%BC%89%E7%99%BB%E5%BD%95%E2%80%94%E2%80%94%E6%8E%A8%E8%8D%90"><span class="toc-number">4.</span> <span class="toc-text">四、方式二：SSH（Stelnet）登录——推荐</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%96%B9%E5%BC%8F%E4%B8%89%EF%BC%9ATelnet-%E7%99%BB%E5%BD%95"><span class="toc-number">5.</span> <span class="toc-text">五、方式三：Telnet 登录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E9%80%9F%E6%9F%A5"><span class="toc-number">6.</span> <span class="toc-text">六、常见问题速查</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%B0%8F%E7%BB%93"><span class="toc-number">7.</span> <span class="toc-text">小结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/ensp-firewall-remote-login/" title="eNSP 配置华为防火墙的非 Console 口登录">eNSP 配置华为防火墙的非 Console 口登录</a><time datetime="2026-09-06T03:30:00.000Z" title="发表于 2026-09-06 11:30:00">2026-09-06</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/posts/hello-world/" title="Hello World">Hello World</a><time datetime="2026-09-06T01:15:46.840Z" title="发表于 2026-09-06 09:15:46">2026-09-06</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By 沐爻</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.0</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.0"></script><script src="/js/main.js?v=5.7.0"></script><div class="js-pjax"></div><script defer src="/js/snow.js"></script><script defer src="/js/fps.js"></script><script defer src="/js/aside-btn.js"></script><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/dist/activate-power-mode.min.js"></script><script>POWERMODE.colorful = true;
+POWERMODE.shake = false;
+POWERMODE.mobile = false;
+document.body.addEventListener('input', POWERMODE);
+</script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索文章" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.7.0"></script></div></div></body></html>
