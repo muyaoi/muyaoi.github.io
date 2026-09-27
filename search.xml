@@ -1,22 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Hello World</title>
-    <url>/posts/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+    <title>防火墙学习（二）：通过业务口 Web 登录防火墙</title>
+    <url>/posts/firewall-02-web-login-via-interface/</url>
+    <content><![CDATA[<p>上一篇能登进 Web 界面，靠的是出厂就配好 IP、铺好路的管理口 GE0&#x2F;0&#x2F;0。但实际组网里，防火墙往往装在机柜里，管理口未必接在你手边——更常用的做法是让<strong>业务口也具备管理能力</strong>。这篇就完整走一遍「接口 IP → 服务放行 → 区域划分 → 账号权限」四个环节，比第一篇多出了区域和账号两块拼图。</p>
+<span id="more"></span>
 
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>还是防火墙加 Cloud 云的组合，变化在网段：这次桥接的网卡在 <code>10.1.2.x</code> 网段，准备把业务口 GE1&#x2F;0&#x2F;0 配成 <code>10.1.2.1</code>，真实主机当 Web 客户端：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image9.png" alt="eNSP 拓扑：Cloud 云 + USG6000V 防火墙"></p>
+<h2 id="配置-Cloud-云"><a href="#配置-Cloud-云" class="headerlink" title="配置 Cloud 云"></a>配置 Cloud 云</h2><p>打开 Cloud 配置，添加 UDP 和真实网卡（10.1.2.100 所在的 eNSP 网卡）并设置端口，开启双向通道。原理和上一篇完全一样，只是换了个网段接入：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image10.png" alt="Cloud 添加 UDP 与网卡 10.1.2.100 并开启双向通道"></p>
+<h2 id="Console-首次登录并改密"><a href="#Console-首次登录并改密" class="headerlink" title="Console 首次登录并改密"></a>Console 首次登录并改密</h2><p>开启防火墙设备，输入默认用户 <code>admin</code>、密码 <code>Admin@123</code>，首次登录会强制修改密码，这里改为 <code>huawei@123</code>。这一步和上一篇相同，是所有后续配置的入口：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image3.png" alt="Console 首次登录并修改默认密码"></p>
+<h2 id="配置业务口-GE1-0-0"><a href="#配置业务口-GE1-0-0" class="headerlink" title="配置业务口 GE1&#x2F;0&#x2F;0"></a>配置业务口 GE1&#x2F;0&#x2F;0</h2><p>业务口和管理口最大的区别：<strong>出厂既没有 IP，也不在任何安全区域里</strong>。所以要从头配起。先进入 GE1&#x2F;0&#x2F;0：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">interface GigabitEthernet 1/0/0</span><br></pre></td></tr></table></figure>
 
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+<p><img src="/posts/firewall-02-web-login-via-interface/image11.png" alt="进入 GigabitEthernet 1&#x2F;0&#x2F;0 接口视图"></p>
+<p>老规矩，先开服务管理功能，再放行 HTTP 和 HTTPS——这层「接口服务开关」和管理口上的配置是一样的：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image12.png" alt="接口下开启 service-manage 功能"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image13.png" alt="接口下放行 http&#x2F;https 服务"></p>
+<p>接着给接口配上 IP 地址并退出接口视图：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ip address 10.1.2.1 24</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
 
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image14.png" alt="配置接口 IP 地址 10.1.2.1&#x2F;24"></p>
+<h2 id="将接口加入-Trust-区域"><a href="#将接口加入-Trust-区域" class="headerlink" title="将接口加入 Trust 区域"></a>将接口加入 Trust 区域</h2><p>这一步是业务口和管理口的<strong>本质差异</strong>：防火墙只检查「区域之间」的流量，接口必须先划入某个安全区域，才有资格参与安全策略的检查。进入受信任区域（trust），把 GE1&#x2F;0&#x2F;0 加进去：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image15.png" alt="将 GE1&#x2F;0&#x2F;0 加入 trust 区域"></p>
+<p>trust 是受信任区域，优先级仅次于防火墙本机（local）。把我们自己的管理流量从 trust 区域发往防火墙自身，方向就是 trust → local。</p>
+<h2 id="配置-VTY-登录与-AAA-账号"><a href="#配置-VTY-登录与-AAA-账号" class="headerlink" title="配置 VTY 登录与 AAA 账号"></a>配置 VTY 登录与 AAA 账号</h2><p>Web 界面之外，先把命令行的远程登录底座打好。进入 VTY 视图（虚拟终端），<code>0 4</code> 表示 0 到 4 共 5 路，也就是允许 5 个用户同时远程登录：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image16.png" alt="VTY 视图允许 5 个用户登录"></p>
+<p>把登录用户的等级设为 3 级。华为设备的命令行等级从 0 到 3（访问级、监控级、配置级、管理级），3 级是最高级，能进系统视图做全部配置：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image17.png" alt="设置登录用户等级 level 3"></p>
+<p>然后进入 AAA 认证视图，创建登录账号：用户名 <code>whx</code>、密码 <code>whx@123456</code>、等级 3 级。AAA 负责三件事——认证（Authentication，你是谁）、授权（Authorization，你能干什么）、审计（Accounting，你干过什么）：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image18.png" alt="AAA 创建用户 whx 并设置密码与等级"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image19.png" alt="AAA 用户密码配置"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image20.png" alt="AAA 用户等级配置"></p>
+<p>创建好的用户还要开启 Web 登录服务，再添加到系统用户里，赋予管理员角色——否则账号虽然存在，却没有登录 Web 界面的权限：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image21.png" alt="允许 whx 用户 Web 登录"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image22.png" alt="将 whx 用户添加到系统用户"></p>
+<h2 id="浏览器登录验证"><a href="#浏览器登录验证" class="headerlink" title="浏览器登录验证"></a>浏览器登录验证</h2><p>在浏览器地址栏输入 <code>https://10.1.2.1:8443</code>，这次用刚创建的 <code>whx</code> 账号登录：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image23.png" alt="浏览器访问 https:&#x2F;&#x2F;10.1.2.1:8443"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image24.png" alt="成功通过业务口进入 Web 管理界面"></p>
+<div class="note info flat"><p>对比两篇的差异就是业务口管理的完整清单：<strong>接口 IP</strong>、<strong>service-manage 服务放行</strong>、<strong>划入安全区域</strong>、<strong>AAA 账号授权</strong>。管理口出厂替你做好了后两项，业务口则要自己动手——少任何一步，Web 页面都打不开。</p>
+</div>
 ]]></content>
+      <categories>
+        <category>防火墙</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>防火墙</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>防火墙学习（一）：Console 口初始化与 Web 管理界面登录</title>
+    <url>/posts/firewall-01-console-init-web-login/</url>
+    <content><![CDATA[<p>和路由器、交换机开箱就能配不一样，USG6000V 出厂时所有业务口都处于关闭状态，想碰它只能从 Console 口开始。这个系列的第一篇，就把「第一次开机」走完整：Console 首次登录改密 → 打开管理口的 HTTP&#x2F;HTTPS 服务 → 用浏览器进入 Web 管理界面。后面几篇的业务口、Telnet、SSH，都是建立在这一步的基础上的。</p>
+<span id="more"></span>
+
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>在 eNSP 中建立拓扑，只需要一台 USG6000V 防火墙和一个 Cloud 云。Cloud 本身不是网络设备，它的作用是<strong>把真实主机的物理网卡桥接进虚拟拓扑</strong>——有了它，主机上的浏览器才能直接访问防火墙的管理地址：</p>
+<p><img src="/posts/firewall-01-console-init-web-login/image1.png" alt="eNSP 拓扑：Cloud 云 + USG6000V 防火墙"></p>
+<h2 id="配置-Cloud-云"><a href="#配置-Cloud-云" class="headerlink" title="配置 Cloud 云"></a>配置 Cloud 云</h2><p>打开 Cloud 的配置界面，做三件事：</p>
+<ol>
+<li>添加一个 <strong>UDP 端口</strong>，再添加真实网卡（192.168.0.2 所在的 eNSP 网卡），两边分别设置端口编号，把端口和网卡”绑”在一起；</li>
+<li>勾选<strong>双向通道</strong>——不勾的话流量只能单向通过，浏览器请求发得出去、回包进不来，页面照样打不开；</li>
+<li>增加按钮，把这条链路加进拓扑。</li>
+</ol>
+<p><img src="/posts/firewall-01-console-init-web-login/image2.png" alt="Cloud 添加 UDP 与真实网卡并开启双向通道"></p>
+<p>选网卡时注意网段：USG6000V 的管理口出厂 IP 是 <code>192.168.0.1/24</code>，所以桥接的网卡要在 <code>192.168.0.x</code> 网段（这里真实主机地址是 192.168.0.2），两边才能直接通信。</p>
+<h2 id="Console-首次登录并改密"><a href="#Console-首次登录并改密" class="headerlink" title="Console 首次登录并改密"></a>Console 首次登录并改密</h2><p>启动防火墙设备，等它跑完自检，在 Console 终端输入默认用户名 <code>admin</code>、默认密码 <code>Admin@123</code>。首次登录系统会<strong>强制要求修改密码</strong>，这里改成 <code>huawei@123</code>：</p>
+<p><img src="/posts/firewall-01-console-init-web-login/image3.png" alt="Console 首次登录并修改默认密码"></p>
+<p>新密码不是随便设的：必须同时包含大写字母、小写字母、数字和特殊字符，且不能出现连续三个以上的相同字符。这是防火墙的第一道安全门——防止设备带着弱口令上网。</p>
+<h2 id="开启管理口的-Web-服务"><a href="#开启管理口的-Web-服务" class="headerlink" title="开启管理口的 Web 服务"></a>开启管理口的 Web 服务</h2><p>进入防火墙的管理口。GE0&#x2F;0&#x2F;0 是 USG6000V 的<strong>带外管理口</strong>，出厂自带 IP <code>192.168.0.1/24</code>，专门用来做设备管理，一般不跑业务流量：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">interface GigabitEthernet 0/0/0</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-01-console-init-web-login/image4.png" alt="进入 GigabitEthernet 0&#x2F;0&#x2F;0 接口视图"></p>
+<p>防火墙的接口上有一层独立的「服务开关」，这就是 <code>service-manage</code>：即使安全策略放行了流量，接口没开启对应服务，管理流量照样进不来。第一步先启用它：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">service-manage enable</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-01-console-init-web-login/image5.png" alt="接口下开启 service-manage 功能"></p>
+<p>然后在这个接口上放行 HTTP 和 HTTPS，浏览器才能打开设备的 Web 页面：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">service-manage http permit</span><br><span class="line">service-manage https permit</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-01-console-init-web-login/image6.png" alt="接口下放行 http&#x2F;https 服务"></p>
+<h2 id="浏览器登录验证"><a href="#浏览器登录验证" class="headerlink" title="浏览器登录验证"></a>浏览器登录验证</h2><p>回到真实主机，在浏览器地址栏输入 <code>https://192.168.0.1:8443</code>——注意端口是 <strong>8443</strong> 而不是 443，这是华为防火墙 Web 管理的默认端口。第一次访问会提示证书不受信任，这是设备自签名证书的正常现象，继续访问即可。输入账号 <code>admin</code> 和改好的密码，就能进入防火墙的 Web 配置界面：</p>
+<p><img src="/posts/firewall-01-console-init-web-login/image7.png" alt="浏览器访问 https:&#x2F;&#x2F;192.168.0.1:8443 登录页"></p>
+<p><img src="/posts/firewall-01-console-init-web-login/image8.png" alt="成功进入防火墙 Web 管理界面"></p>
+<h2 id="命令小结"><a href="#命令小结" class="headerlink" title="命令小结"></a>命令小结</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">interface GigabitEthernet 0/0/0</span><br><span class="line"> service-manage enable</span><br><span class="line"> service-manage http permit</span><br><span class="line"> service-manage https permit</span><br></pre></td></tr></table></figure>
+
+<div class="note info flat"><p>这一篇其实只做了接口层的「服务放行」，还没动安全策略——因为管理口出厂就已经把管理流量的路铺好了。换成业务口就没这么幸运了，下一篇会加上区域划分和账号权限，流程会完整很多。</p>
+</div>
+]]></content>
+      <categories>
+        <category>防火墙</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>防火墙</tag>
+      </tags>
   </entry>
   <entry>
     <title>eNSP 配置华为防火墙的非 Console 口登录</title>
@@ -117,5 +199,158 @@
       <tags>
         <tag>华为</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>防火墙学习（三）：Telnet 远程登录防火墙</title>
+    <url>/posts/firewall-03-telnet-login/</url>
+    <content><![CDATA[<p>前两篇分别从 Console 口和 Web 界面摸到了防火墙，这篇换成网络工程师日常最常用的 <strong>Telnet</strong> 命令行。这次客户端不是本机浏览器，而是拓扑里的另一台路由器——从一台设备远程登录另一台设备，更接近真实的运维场景。Telnet 一共要过五道关：<strong>全局服务 → 接口服务 → 安全区域 → 安全策略 → VTY&#x2F;AAA 认证</strong>，任何一环没配，登录都会失败。</p>
+<span id="more"></span>
+
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>拓扑里加了一台路由器作为 Telnet 客户端，从它身上发起对防火墙的远程登录：</p>
+<p><img src="/posts/firewall-03-telnet-login/image25.png" alt="eNSP 拓扑：路由器 + USG6000V 防火墙"></p>
+<h2 id="设置-IP-地址"><a href="#设置-IP-地址" class="headerlink" title="设置 IP 地址"></a>设置 IP 地址</h2><p>给路由器和防火墙的互联接口分别配置 IP 地址，保证路由器和防火墙之间路由可达——连不通就谈不上远程登录：</p>
+<p><img src="/posts/firewall-03-telnet-login/image26.png" alt="配置路由器与防火墙接口 IP"></p>
+<h2 id="开启-Telnet-服务并配置接口"><a href="#开启-Telnet-服务并配置接口" class="headerlink" title="开启 Telnet 服务并配置接口"></a>开启 Telnet 服务并配置接口</h2><p>华为设备的 Telnet 服务默认是<strong>关闭</strong>的，先在全局视图下把它打开，然后进入 GE1&#x2F;0&#x2F;0 接口设置 IP 地址：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">telnet server enable</span><br><span class="line">ip address 10.1.2.1 24</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-03-telnet-login/image27.png" alt="全局开启 telnet 服务并配置接口 IP"></p>
+<p>再进入接口视图开启服务管理，服务状态指定为 telnet——相当于在这个接口上为 Telnet 流量开了一扇门：</p>
+<p><img src="/posts/firewall-03-telnet-login/image28.png" alt="接口下 service-manage 放行 telnet"></p>
+<h2 id="划分安全区域"><a href="#划分安全区域" class="headerlink" title="划分安全区域"></a>划分安全区域</h2><p>和上一篇一样，把 GE1&#x2F;0&#x2F;0 加入受信任区域（trust）。接口有了区域「身份」，经过它的流量才能被安全策略检查：</p>
+<p><img src="/posts/firewall-03-telnet-login/image29.png" alt="将 GE1&#x2F;0&#x2F;0 加入 trust 区域"></p>
+<h2 id="放行安全策略"><a href="#放行安全策略" class="headerlink" title="放行安全策略"></a>放行安全策略</h2><p>这篇的新知识点在这里。路由器登录防火墙，Telnet 报文的目的地是<strong>防火墙本身</strong>，在防火墙的世界里这属于 local 区域——所以规则要设成源区域 trust、目的区域 local，并把流量放行：</p>
+<p><img src="/posts/firewall-03-telnet-login/image30.png" alt="安全策略规则：源 trust 目的 local"></p>
+<p><img src="/posts/firewall-03-telnet-login/image31.png" alt="安全策略放行流量"></p>
+<p><img src="/posts/firewall-03-telnet-login/image32.png" alt="安全策略配置完成"></p>
+<p>这一步是 Telnet 实验里最容易漏的：防火墙对域间流量<strong>默认全部拒绝</strong>，没有这条 trust → local 的放行规则，后面 VTY 和 AAA 配得再对，登录请求也在门口被掐掉了。</p>
+<h2 id="配置-VTY-与-AAA-认证"><a href="#配置-VTY-与-AAA-认证" class="headerlink" title="配置 VTY 与 AAA 认证"></a>配置 VTY 与 AAA 认证</h2><p>进入 VTY 视图，允许 5 个用户同时登录（<code>vty 0 4</code>）、用户等级 3 级，并把认证方式指定为 telnet：</p>
+<p><img src="/posts/firewall-03-telnet-login/image33.png" alt="VTY 视图配置用户数与等级"></p>
+<p><img src="/posts/firewall-03-telnet-login/image34.png" alt="VTY 设置认证模式"></p>
+<p>进入 AAA 认证视图，建立用户 <code>whx</code>，密码设置为加密方式存储的 <code>whx@123456</code>，等级 3 级，并开启 telnet 功能。密码用 <code>cipher</code> 加密存储后，配置文件里只能看到密文，看不到明文：</p>
+<p><img src="/posts/firewall-03-telnet-login/image35.png" alt="AAA 创建用户 whx 并加密存储密码"></p>
+<p><img src="/posts/firewall-03-telnet-login/image36.png" alt="AAA 用户开启 telnet 服务"></p>
+<p>将建立的用户加入到系统用户下，账号才算正式生效：</p>
+<p><img src="/posts/firewall-03-telnet-login/image37.png" alt="将 whx 用户加入系统用户"></p>
+<h2 id="远程登录测试"><a href="#远程登录测试" class="headerlink" title="远程登录测试"></a>远程登录测试</h2><p>切到路由器上做测试，Telnet 远程登录到防火墙，输入 <code>whx</code> 账号和密码，能进入防火墙的命令行界面即为配置成功：</p>
+<p><img src="/posts/firewall-03-telnet-login/image38.png" alt="路由器 telnet 登录防火墙成功"></p>
+<h2 id="扩展：通过管理口-Telnet-登录"><a href="#扩展：通过管理口-Telnet-登录" class="headerlink" title="扩展：通过管理口 Telnet 登录"></a>扩展：通过管理口 Telnet 登录</h2><p>业务口走完了全套流程，那管理口呢？正好做个对照实验。</p>
+<p>建立拓扑：</p>
+<p><img src="/posts/firewall-03-telnet-login/image39.png" alt="扩展实验拓扑：Cloud + 管理口"></p>
+<p>配置 IP 地址：</p>
+<p><img src="/posts/firewall-03-telnet-login/image40.png" alt="配置管理口与网卡 IP"></p>
+<p>进入防火墙，全局开启 telnet 服务（已开就跳过），然后进入管理口 GE0&#x2F;0&#x2F;0 开启 telnet 服务：</p>
+<p><img src="/posts/firewall-03-telnet-login/image41.png" alt="管理口开启 telnet 服务"></p>
+<p>注意这里<strong>不需要</strong>再划区域、配安全策略——管理口出厂已经把管理流量的路铺好了，这正是它和业务口的差别。用刚建好的 <code>whx</code> 用户即可直接登录到防火墙：</p>
+<p><img src="/posts/firewall-03-telnet-login/image42.png" alt="通过管理口 telnet 登录成功"></p>
+<div class="note info flat"><p>Telnet 登录防火墙的五道关：<strong>全局 <code>telnet server enable</code> → 接口 <code>service-manage telnet permit</code> → 接口划入区域 → trust→local 安全策略放行 → VTY + AAA 认证</strong>。排查登录失败时，按这个顺序逐层检查，一查一个准。</p>
+</div>
+]]></content>
+      <categories>
+        <category>防火墙</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>防火墙</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>防火墙学习（四）：安全策略配置与 SSH 登录</title>
+    <url>/posts/firewall-04-security-policy-and-ssh/</url>
+    <content><![CDATA[<p>系列收官篇，讲防火墙最核心的两件事。前半篇是<strong>安全区域与安全策略</strong>——防火墙区别于路由器的灵魂机制，搞懂它才算真正搞懂防火墙；后半篇把远程管理升级成加密的 <strong>SSH</strong>，替换掉明文的 Telnet，并记录 Windows 下连接老防火墙的两个经典报错的解法。</p>
+<span id="more"></span>
+
+<h2 id="一、安全策略配置"><a href="#一、安全策略配置" class="headerlink" title="一、安全策略配置"></a>一、安全策略配置</h2><h3 id="三种安全区域"><a href="#三种安全区域" class="headerlink" title="三种安全区域"></a>三种安全区域</h3><p>华为防火墙默认划分了三个安全区域，各自代表一种信任等级：</p>
+<ul>
+<li><strong>trust（受信任区）</strong>：放内部网络，对应公司内网；</li>
+<li><strong>dmz（隔离区）</strong>：放对外提供服务的服务器（Web、邮件等），内网外网都访问它，但它不能主动碰内网；</li>
+<li><strong>untrust（非受信任区）</strong>：放外部网络，通常是互联网出口方向。</li>
+</ul>
+<p>加上代表防火墙自身的 local 区域，按优先级从高到低排：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">local &gt; trust &gt; dmz &gt; untrust</span><br></pre></td></tr></table></figure>
+
+<p>优先级决定了流量的「默认态度」：从高优先级区域到低优先级区域算外出，反过来算进入。最关键的一条规则是——<strong>不同区域之间的流量默认全部拒绝</strong>，想通，必须由安全策略显式放行。这就是防火墙和路由器最大的区别：路由器看路由表，通了就转发；防火墙先看策略，不许可就不通。</p>
+<h3 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h3><p>拓扑里防火墙拉出多个接口，分别划入三个区域，模拟典型的三区组网：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image43.png" alt="安全策略实验拓扑：trust&#x2F;dmz&#x2F;untrust 三个区域"></p>
+<h3 id="接口与区域划分"><a href="#接口与区域划分" class="headerlink" title="接口与区域划分"></a>接口与区域划分</h3><p>先进入各接口，把 IP 地址配置好：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image44.png" alt="配置各接口 IP 地址"></p>
+<p>然后逐个区域划分接口。进入 trust 区域，将 GE0 口和 GE1 口加入：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image45.png" alt="将 0 口和 1 口加入 trust 区域"></p>
+<p>进入 dmz 区域，将 GE2 口加入：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image46.png" alt="将 2 口加入 dmz 区域"></p>
+<p>进入 untrust 区域，将 GE3 口加入：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image47.png" alt="将 3 口加入 untrust 区域"></p>
+<h3 id="验证区域间默认隔离"><a href="#验证区域间默认隔离" class="headerlink" title="验证区域间默认隔离"></a>验证区域间默认隔离</h3><p>区域划分完毕，先别急着配策略——用不同区域的主机互 ping，验证一下前面说的「默认拒绝」到底是不是真的：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image48.png" alt="区域间主机测试：不通"></p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image49.png" alt="区域间主机测试结果"></p>
+<p>结果印证了结论：不同区域之间默认不能相互传递流量。想让 trust 和 dmz 之间互通，就得自己写规则。</p>
+<h3 id="配置放行规则"><a href="#配置放行规则" class="headerlink" title="配置放行规则"></a>配置放行规则</h3><p>进入安全策略的规则视图，新建一条规则：源区域设为 trust、目的区域设为 dmz，动作放行。一条规则至少要说清三件事——<strong>流量从哪来（源区域）、到哪里去（目的区域）、放不放行（动作）</strong>，实际生产中还会细化到源地址、目的地址和服务端口：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image50.png" alt="配置 trust→dmz 放行规则"></p>
+<p>再次在主机间测试，trust 区域的主机已经可以正常访问 dmz 区域的主机：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image51.png" alt="放行后区域间正常通信"></p>
+<h2 id="二、通过-SSH-登录防火墙"><a href="#二、通过-SSH-登录防火墙" class="headerlink" title="二、通过 SSH 登录防火墙"></a>二、通过 SSH 登录防火墙</h2><p>Telnet 的一切报文都是明文传输，账号密码在网络上「裸奔」，生产环境里应该用加密的 <strong>SSH</strong>（Secure Shell）替代。实验拓扑和第三篇类似，这次从 Windows 主机发起 SSH 连接：</p>
+<h3 id="实验拓扑-1"><a href="#实验拓扑-1" class="headerlink" title="实验拓扑"></a>实验拓扑</h3><p><img src="/posts/firewall-04-security-policy-and-ssh/image52.png" alt="SSH 登录实验拓扑"></p>
+<h3 id="开启-SSH-服务"><a href="#开启-SSH-服务" class="headerlink" title="开启 SSH 服务"></a>开启 SSH 服务</h3><p>SSH 在设备上叫 stelnet（secure telnet）。先在全局开启 SSH 服务：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image53.png" alt="全局开启 stelnet 服务"></p>
+<p>进入相应接口，配置好 IP 地址，并在接口上开启 SSH 服务：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image54.png" alt="接口配置 IP 并开启 ssh 服务"></p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image55.png" alt="接口服务配置"></p>
+<p>照旧进入 trust 区域，将接口加入受信任区域：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image56.png" alt="将接口加入 trust 区域"></p>
+<p>进入安全策略，把 trust → local 的管理流量放行——和 Telnet 那篇的道理一样，SSH 报文的目的地同样是防火墙自身：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image57.png" alt="安全策略放行 SSH 管理流量"></p>
+<h3 id="认证配置"><a href="#认证配置" class="headerlink" title="认证配置"></a>认证配置</h3><p>进入 VTY 视图，把认证方式配置为 SSH——这样这个 VTY 通道只接受 SSH 登录：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image58.png" alt="VTY 配置 SSH 认证方式"></p>
+<p>进入 AAA 视图，配置认证用户：</p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image59.png" alt="AAA 配置认证用户"></p>
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image60.png" alt="AAA 用户密码与等级"></p>
+<p>接下来是 SSH 特有的两步。第一，为 SSH 用户指定验证方式为 password（密码认证），并开启 stelnet 远程服务：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh user whx authentication-type password</span><br><span class="line">ssh user whx service-type stelnet</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image61.png" alt="SSH 用户验证方式与服务类型"></p>
+<p>第二，在设备上生成本地 RSA 密钥对——SSH 连接建立时客户端和服务端要靠它做加密协商，没有密钥对，握手直接失败：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">rsa local key-pair create</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image62.png" alt="生成本地 RSA 密钥对"></p>
+<h3 id="Windows-下连接测试"><a href="#Windows-下连接测试" class="headerlink" title="Windows 下连接测试"></a>Windows 下连接测试</h3><p>在 Windows 的 cmd 窗口里输入 <code>ssh 用户名@防火墙IP</code> 尝试连接：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh whx@10.1.2.1</span><br></pre></td></tr></table></figure>
+
+<div class="note warning flat"><p><strong>踩坑一：连不上，报算法协商失败。</strong> 新版 Windows 自带的 OpenSSH 客户端默认禁用了 SHA1 系列的老密钥交换算法，而防火墙这类老设备只支持旧算法，两边谈不拢就握手失败。连接时手动把算法加回来即可：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh -o KexAlgorithms=+diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1 whx@10.1.2.1</span><br></pre></td></tr></table></figure></div>
+
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image63.png" alt="Windows cmd 使用指定 KEX 算法连接 SSH"></p>
+<div class="note warning flat"><p><strong>踩坑二：报 HOST KEY VERIFICATION FAILED 或主机密钥变更警告。</strong> 之前连过同一 IP（比如重做过实验、换了设备），本地 <code>known_hosts</code> 里存着旧的主机密钥，与新设备对不上。清掉本地保存的旧密钥再连：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ssh-keygen -R 10.1.2.1</span><br></pre></td></tr></table></figure></div>
+
+<p><img src="/posts/firewall-04-security-policy-and-ssh/image64.png" alt="ssh-keygen -R 清除旧主机密钥后连接成功"></p>
+<div class="note info flat"><p>对比 Telnet 和 SSH 的配置清单，你会发现流程几乎一样（全局服务 → 接口服务 → 区域 → 策略 → VTY&#x2F;AAA），SSH 只是多了一步 <strong>RSA 密钥对</strong>，再加上客户端侧的算法兼容问题。多付出的这几步，换来的是全程加密——这就是生产环境选 SSH 的理由。</p>
+</div>
+]]></content>
+      <categories>
+        <category>防火墙</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>防火墙</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/posts/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
   </entry>
 </search>
