@@ -1,55 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>防火墙学习（二）：通过业务口 Web 登录防火墙</title>
-    <url>/posts/firewall-02-web-login-via-interface/</url>
-    <content><![CDATA[<p>上一篇能登进 Web 界面，靠的是出厂就配好 IP、铺好路的管理口 GE0&#x2F;0&#x2F;0。但实际组网里，防火墙往往装在机柜里，管理口未必接在你手边——更常用的做法是让<strong>业务口也具备管理能力</strong>。这篇就完整走一遍「接口 IP → 服务放行 → 区域划分 → 账号权限」四个环节，比第一篇多出了区域和账号两块拼图。</p>
+    <title>数据通信学习（二）：浮动路由配置</title>
+    <url>/posts/dc-02-floating-static-route/</url>
+    <content><![CDATA[<p>静态路由最大的软肋是”不坏不换”——主链路断了，流量还是傻傻地往断口发。<strong>浮动路由</strong>就是解药：给同一目的网段配两条路径，一主一备，平时备份路由安静地躺在配置里不生效，主链路一断，它立刻”浮上来”接管流量。</p>
 <span id="more"></span>
 
-<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>还是防火墙加 Cloud 云的组合，变化在网段：这次桥接的网卡在 <code>10.1.2.x</code> 网段，准备把业务口 GE1&#x2F;0&#x2F;0 配成 <code>10.1.2.1</code>，真实主机当 Web 客户端：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image9.png" alt="eNSP 拓扑：Cloud 云 + USG6000V 防火墙"></p>
-<h2 id="配置-Cloud-云"><a href="#配置-Cloud-云" class="headerlink" title="配置 Cloud 云"></a>配置 Cloud 云</h2><p>打开 Cloud 配置，添加 UDP 和真实网卡（10.1.2.100 所在的 eNSP 网卡）并设置端口，开启双向通道。原理和上一篇完全一样，只是换了个网段接入：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image10.png" alt="Cloud 添加 UDP 与网卡 10.1.2.100 并开启双向通道"></p>
-<h2 id="Console-首次登录并改密"><a href="#Console-首次登录并改密" class="headerlink" title="Console 首次登录并改密"></a>Console 首次登录并改密</h2><p>开启防火墙设备，输入默认用户 <code>admin</code>、密码 <code>Admin@123</code>，首次登录会强制修改密码，这里改为 <code>huawei@123</code>。这一步和上一篇相同，是所有后续配置的入口：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image3.png" alt="Console 首次登录并修改默认密码"></p>
-<h2 id="配置业务口-GE1-0-0"><a href="#配置业务口-GE1-0-0" class="headerlink" title="配置业务口 GE1&#x2F;0&#x2F;0"></a>配置业务口 GE1&#x2F;0&#x2F;0</h2><p>业务口和管理口最大的区别：<strong>出厂既没有 IP，也不在任何安全区域里</strong>。所以要从头配起。先进入 GE1&#x2F;0&#x2F;0：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">interface GigabitEthernet 1/0/0</span><br></pre></td></tr></table></figure>
-
-<p><img src="/posts/firewall-02-web-login-via-interface/image11.png" alt="进入 GigabitEthernet 1&#x2F;0&#x2F;0 接口视图"></p>
-<p>老规矩，先开服务管理功能，再放行 HTTP 和 HTTPS——这层「接口服务开关」和管理口上的配置是一样的：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image12.png" alt="接口下开启 service-manage 功能"></p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image13.png" alt="接口下放行 http&#x2F;https 服务"></p>
-<p>接着给接口配上 IP 地址并退出接口视图：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ip address 10.1.2.1 24</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
-
-<p><img src="/posts/firewall-02-web-login-via-interface/image14.png" alt="配置接口 IP 地址 10.1.2.1&#x2F;24"></p>
-<h2 id="将接口加入-Trust-区域"><a href="#将接口加入-Trust-区域" class="headerlink" title="将接口加入 Trust 区域"></a>将接口加入 Trust 区域</h2><p>这一步是业务口和管理口的<strong>本质差异</strong>：防火墙只检查「区域之间」的流量，接口必须先划入某个安全区域，才有资格参与安全策略的检查。进入受信任区域（trust），把 GE1&#x2F;0&#x2F;0 加进去：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image15.png" alt="将 GE1&#x2F;0&#x2F;0 加入 trust 区域"></p>
-<p>trust 是受信任区域，优先级仅次于防火墙本机（local）。把我们自己的管理流量从 trust 区域发往防火墙自身，方向就是 trust → local。</p>
-<h2 id="配置-VTY-登录与-AAA-账号"><a href="#配置-VTY-登录与-AAA-账号" class="headerlink" title="配置 VTY 登录与 AAA 账号"></a>配置 VTY 登录与 AAA 账号</h2><p>Web 界面之外，先把命令行的远程登录底座打好。进入 VTY 视图（虚拟终端），<code>0 4</code> 表示 0 到 4 共 5 路，也就是允许 5 个用户同时远程登录：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image16.png" alt="VTY 视图允许 5 个用户登录"></p>
-<p>把登录用户的等级设为 3 级。华为设备的命令行等级从 0 到 3（访问级、监控级、配置级、管理级），3 级是最高级，能进系统视图做全部配置：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image17.png" alt="设置登录用户等级 level 3"></p>
-<p>然后进入 AAA 认证视图，创建登录账号：用户名 <code>whx</code>、密码 <code>whx@123456</code>、等级 3 级。AAA 负责三件事——认证（Authentication，你是谁）、授权（Authorization，你能干什么）、审计（Accounting，你干过什么）：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image18.png" alt="AAA 创建用户 whx 并设置密码与等级"></p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image19.png" alt="AAA 用户密码配置"></p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image20.png" alt="AAA 用户等级配置"></p>
-<p>创建好的用户还要开启 Web 登录服务，再添加到系统用户里，赋予管理员角色——否则账号虽然存在，却没有登录 Web 界面的权限：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image21.png" alt="允许 whx 用户 Web 登录"></p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image22.png" alt="将 whx 用户添加到系统用户"></p>
-<h2 id="浏览器登录验证"><a href="#浏览器登录验证" class="headerlink" title="浏览器登录验证"></a>浏览器登录验证</h2><p>在浏览器地址栏输入 <code>https://10.1.2.1:8443</code>，这次用刚创建的 <code>whx</code> 账号登录：</p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image23.png" alt="浏览器访问 https:&#x2F;&#x2F;10.1.2.1:8443"></p>
-<p><img src="/posts/firewall-02-web-login-via-interface/image24.png" alt="成功通过业务口进入 Web 管理界面"></p>
-<div class="note info flat"><p>对比两篇的差异就是业务口管理的完整清单：<strong>接口 IP</strong>、<strong>service-manage 服务放行</strong>、<strong>划入安全区域</strong>、<strong>AAA 账号授权</strong>。管理口出厂替你做好了后两项，业务口则要自己动手——少任何一步，Web 页面都打不开。</p>
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>两台路由器之间拉两条链路：一条是主链路，一条是备份链路。平时流量走主链路，主链路挂掉后自动切到备份：</p>
+<p><img src="/posts/dc-02-floating-static-route/image14.png" alt="浮动路由实验拓扑：主备双链路"></p>
+<h2 id="配置-IP-与静态路由"><a href="#配置-IP-与静态路由" class="headerlink" title="配置 IP 与静态路由"></a>配置 IP 与静态路由</h2><p>给所有接口配置好 IP 地址，然后配置静态路由。关键是<strong>两条路由要有不同的优先级</strong>：华为静态路由默认优先级是 60，数值越大可信度越低。主链路用默认值，备份链路把优先级调大（比如 100），让它”备而不用”：</p>
+<p><img src="/posts/dc-02-floating-static-route/image15.png" alt="配置接口 IP 与主链路静态路由"></p>
+<p><img src="/posts/dc-02-floating-static-route/image16.png" alt="配置备份链路的浮动路由"></p>
+<p><img src="/posts/dc-02-floating-static-route/image17.png" alt="静态路由与浮动路由配置明细"></p>
+<h2 id="测试连通性"><a href="#测试连通性" class="headerlink" title="测试连通性"></a>测试连通性</h2><p>主机间 ping 测试，走主链路正常通信：</p>
+<p><img src="/posts/dc-02-floating-static-route/image18.png" alt="主链路连通性测试"></p>
+<h2 id="查看路由条目"><a href="#查看路由条目" class="headerlink" title="查看路由条目"></a>查看路由条目</h2><p><code>display ip routing-table</code> 可以看到：路由表里只有<strong>优先级 60 的主路由</strong>，优先级 100 的备份路由因为”输给了主路由”，此时只存在于配置里，不在路由表中：</p>
+<p><img src="/posts/dc-02-floating-static-route/image19.png" alt="主链路正常时的路由表：只有主路由"></p>
+<h2 id="模拟主链路故障"><a href="#模拟主链路故障" class="headerlink" title="模拟主链路故障"></a>模拟主链路故障</h2><p>现在把主链路的接口人为 shutdown，模拟线路断掉，再 ping 一次——流量切换到了备份链路，依然连通：</p>
+<p><img src="/posts/dc-02-floating-static-route/image20.png" alt="断开主链路后仍可连通"></p>
+<p><img src="/posts/dc-02-floating-static-route/image21.png" alt="备份链路接管流量"></p>
+<h2 id="再查路由条目"><a href="#再查路由条目" class="headerlink" title="再查路由条目"></a>再查路由条目</h2><p>再看路由表：优先级 100 的备份路由已经顶上，出现在路由表里了——这就是”浮动”的含义。恢复主链路接口后，主路由又会自动抢回收发权：</p>
+<p><img src="/posts/dc-02-floating-static-route/image22.png" alt="主链路故障后备份路由浮出"></p>
+<div class="note info flat"><p>浮动路由的三句话总结：<strong>同目的、不同优先级、一主一备</strong>。主备切换靠的是路由协议自身的感知机制（接口 down → 路由失效），不需要人工干预；但如果故障发生在链路中间而接口仍是 up 状态（比如光路异常），纯静态方案就感知不到，这种情况要靠 BFD 联动或动态路由协议。</p>
 </div>
 ]]></content>
       <categories>
-        <category>防火墙</category>
+        <category>数据通信</category>
       </categories>
       <tags>
         <tag>华为</tag>
         <tag>eNSP</tag>
-        <tag>防火墙</tag>
+        <tag>数据通信</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>数据通信学习（一）：静态路由与默认路由配置</title>
+    <url>/posts/dc-01-static-and-default-routes/</url>
+    <content><![CDATA[<p>路由器不像交换机能自学 MAC 地址，<strong>去往哪个网段走哪条路，必须明确告诉它</strong>——这就是路由配置。这篇是数据通信系列的第一课：先用静态路由手工指定路径，打通两台 PC；再用一条默认路由，解决”出口唯一”时的简化配置。</p>
+<span id="more"></span>
+
+<h2 id="一、静态路由"><a href="#一、静态路由" class="headerlink" title="一、静态路由"></a>一、静态路由</h2><h3 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h3><p>两台路由器串联，两端各接一台 PC。PC1 和 PC2 分属不同网段，中间隔着的路由器彼此并不”认识”对面的网段：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image1.png" alt="静态路由实验拓扑：两台路由器串联"></p>
+<h3 id="配置-IP-地址"><a href="#配置-IP-地址" class="headerlink" title="配置 IP 地址"></a>配置 IP 地址</h3><p>给两台路由器的互联接口和 LAN 口都配上 IP 地址，两台 PC 也按规划配好地址和网关。网关是 PC 出门的第一跳，别忘了指到路由器：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image2.png" alt="配置路由器接口 IP 地址"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image3.png" alt="配置路由器各接口 IP"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image4.png" alt="配置接口 IP 与 PC 地址规划"></p>
+<h3 id="创建静态路由"><a href="#创建静态路由" class="headerlink" title="创建静态路由"></a>创建静态路由</h3><p>静态路由的命令格式是：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ip route-static &lt;目的网段&gt; &lt;子网掩码&gt; &lt;下一跳地址&gt;</span><br></pre></td></tr></table></figure>
+
+<p>含义很直白：要去这个网段的包，交给谁。给两台路由器分别配置——<strong>只配单边是不通的，往返流量必须两条路都有人管</strong>：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image5.png" alt="R1 配置静态路由"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image6.png" alt="R2 配置静态路由"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image7.png" alt="静态路由配置明细"></p>
+<h3 id="连通性测试"><a href="#连通性测试" class="headerlink" title="连通性测试"></a>连通性测试</h3><p>PC1 ping PC2，能通即配置成功：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image8.png" alt="PC1 与 PC2 连通性测试成功"></p>
+<h2 id="二、默认路由"><a href="#二、默认路由" class="headerlink" title="二、默认路由"></a>二、默认路由</h2><h3 id="实验拓扑-1"><a href="#实验拓扑-1" class="headerlink" title="实验拓扑"></a>实验拓扑</h3><p>默认路由是静态路由的”兜底条款”：目的网段用 <code>0.0.0.0/0</code> 表示”其他所有网段”。它适合<strong>出口唯一</strong>的场景——比如企业内网到互联网只有一个出口，逐条静态路由既累又没必要：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image9.png" alt="默认路由实验拓扑"></p>
+<h3 id="配置默认路由"><a href="#配置默认路由" class="headerlink" title="配置默认路由"></a>配置默认路由</h3><p>配好 IP 地址后，在路由器上配置一条默认路由，把所有”路由表里没写”的流量统一丢给下一跳：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ip route-static 0.0.0.0 0.0.0.0 &lt;下一跳地址&gt;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/dc-01-static-and-default-routes/image10.png" alt="配置默认路由"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image11.png" alt="默认路由配置明细"></p>
+<p><img src="/posts/dc-01-static-and-default-routes/image12.png" alt="默认路由路由表条目"></p>
+<h3 id="连通性测试-1"><a href="#连通性测试-1" class="headerlink" title="连通性测试"></a>连通性测试</h3><p>主机间 ping 测试，全部连通：</p>
+<p><img src="/posts/dc-01-static-and-default-routes/image13.png" alt="默认路由连通性测试成功"></p>
+<div class="note info flat"><p>静态路由和默认路由都是<strong>手工维护</strong>的，网络拓扑一变就要人去改，而且自己不会感知链路故障。下一篇的浮动路由，就是给静态路由装上”自动切换”的开关。</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据通信</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>数据通信</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>数据通信学习（三）：路由负载均衡</title>
+    <url>/posts/dc-03-route-load-balancing/</url>
+    <content><![CDATA[<p>浮动路由让两条链路一主一备，备份平时闲着；而负载均衡正好反过来——<strong>两条链路同时干活，流量对半分</strong>，带宽直接翻倍。做法其实简单得出乎意料：把浮动路由实验里的”不同优先级”改回”相同优先级”，等价路由（ECMP）就形成了。</p>
+<span id="more"></span>
+
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>还是双链路拓扑，但这次两条链路地位平等：</p>
+<p><img src="/posts/dc-03-route-load-balancing/image23.png" alt="负载均衡实验拓扑：双链路等价"></p>
+<h2 id="配置-IP-与路由条目"><a href="#配置-IP-与路由条目" class="headerlink" title="配置 IP 与路由条目"></a>配置 IP 与路由条目</h2><p>配置好各接口 IP 地址后，在路由器上配置<strong>两条目的网段相同、优先级相同、下一跳不同</strong>的静态路由。路由表会同时收录这两条等价路由：</p>
+<p><img src="/posts/dc-03-route-load-balancing/image24.png" alt="配置接口 IP 地址"></p>
+<p><img src="/posts/dc-03-route-load-balancing/image25.png" alt="配置两条等价静态路由"></p>
+<p><img src="/posts/dc-03-route-load-balancing/image26.png" alt="等价路由配置明细"></p>
+<h2 id="测试负载均衡"><a href="#测试负载均衡" class="headerlink" title="测试负载均衡"></a>测试负载均衡</h2><p>在主机间发起不同类型的流量（ping 的 ICMP、访问服务的 TCP），链路两端都能正常通信：</p>
+<p><img src="/posts/dc-03-route-load-balancing/image27.png" alt="负载均衡下的连通性测试"></p>
+<p><img src="/posts/dc-03-route-load-balancing/image28.png" alt="双链路正常转发"></p>
+<h2 id="抓包验证"><a href="#抓包验证" class="headerlink" title="抓包验证"></a>抓包验证</h2><p>连通只是及格线，”均衡”要看抓包。在两条链路上分别抓包，判断实现成功的标志是：<strong>每条链路上只能抓到属于一种流的数据包</strong>。</p>
+<p>在路由器 R2 的 s1&#x2F;0&#x2F;0 接口上，只抓到 TCP 的数据包，没有 ICMP 的数据包：</p>
+<p><img src="/posts/dc-03-route-load-balancing/image29.png" alt="R2 s1&#x2F;0&#x2F;0 接口只抓到 TCP 包"></p>
+<p>在路由器 R1 的 s1&#x2F;0&#x2F;1 接口上，只抓到 ICMP 的数据包，没有 TCP 的数据包：</p>
+<p><img src="/posts/dc-03-route-load-balancing/image30.png" alt="R1 s1&#x2F;0&#x2F;1 接口只抓到 ICMP 包"></p>
+<p>至此，负载均衡实现成功。</p>
+<div class="note info flat"><p>为什么一条链路只有一种协议的包？因为等价路由的分流是<strong>按”流”分担</strong>而不是按包轮询：同一股流量（同源同目的同协议）经过哈希计算后固定走某一条链路，保证包的顺序不被打乱；不同”流”则被摊到不同链路上。所以你会在一条链路看到完整的 TCP 流、另一条看到完整的 ICMP 流——这正是负载均衡生效的证据。</p>
+</div>
+]]></content>
+      <categories>
+        <category>数据通信</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>数据通信</tag>
       </tags>
   </entry>
   <entry>
@@ -198,6 +255,58 @@
       </categories>
       <tags>
         <tag>华为</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>防火墙学习（二）：通过业务口 Web 登录防火墙</title>
+    <url>/posts/firewall-02-web-login-via-interface/</url>
+    <content><![CDATA[<p>上一篇能登进 Web 界面，靠的是出厂就配好 IP、铺好路的管理口 GE0&#x2F;0&#x2F;0。但实际组网里，防火墙往往装在机柜里，管理口未必接在你手边——更常用的做法是让<strong>业务口也具备管理能力</strong>。这篇就完整走一遍「接口 IP → 服务放行 → 区域划分 → 账号权限」四个环节，比第一篇多出了区域和账号两块拼图。</p>
+<span id="more"></span>
+
+<h2 id="实验拓扑"><a href="#实验拓扑" class="headerlink" title="实验拓扑"></a>实验拓扑</h2><p>还是防火墙加 Cloud 云的组合，变化在网段：这次桥接的网卡在 <code>10.1.2.x</code> 网段，准备把业务口 GE1&#x2F;0&#x2F;0 配成 <code>10.1.2.1</code>，真实主机当 Web 客户端：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image9.png" alt="eNSP 拓扑：Cloud 云 + USG6000V 防火墙"></p>
+<h2 id="配置-Cloud-云"><a href="#配置-Cloud-云" class="headerlink" title="配置 Cloud 云"></a>配置 Cloud 云</h2><p>打开 Cloud 配置，添加 UDP 和真实网卡（10.1.2.100 所在的 eNSP 网卡）并设置端口，开启双向通道。原理和上一篇完全一样，只是换了个网段接入：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image10.png" alt="Cloud 添加 UDP 与网卡 10.1.2.100 并开启双向通道"></p>
+<h2 id="Console-首次登录并改密"><a href="#Console-首次登录并改密" class="headerlink" title="Console 首次登录并改密"></a>Console 首次登录并改密</h2><p>开启防火墙设备，输入默认用户 <code>admin</code>、密码 <code>Admin@123</code>，首次登录会强制修改密码，这里改为 <code>huawei@123</code>。这一步和上一篇相同，是所有后续配置的入口：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image3.png" alt="Console 首次登录并修改默认密码"></p>
+<h2 id="配置业务口-GE1-0-0"><a href="#配置业务口-GE1-0-0" class="headerlink" title="配置业务口 GE1&#x2F;0&#x2F;0"></a>配置业务口 GE1&#x2F;0&#x2F;0</h2><p>业务口和管理口最大的区别：<strong>出厂既没有 IP，也不在任何安全区域里</strong>。所以要从头配起。先进入 GE1&#x2F;0&#x2F;0：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">interface GigabitEthernet 1/0/0</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-02-web-login-via-interface/image11.png" alt="进入 GigabitEthernet 1&#x2F;0&#x2F;0 接口视图"></p>
+<p>老规矩，先开服务管理功能，再放行 HTTP 和 HTTPS——这层「接口服务开关」和管理口上的配置是一样的：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image12.png" alt="接口下开启 service-manage 功能"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image13.png" alt="接口下放行 http&#x2F;https 服务"></p>
+<p>接着给接口配上 IP 地址并退出接口视图：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">ip address 10.1.2.1 24</span><br><span class="line">quit</span><br></pre></td></tr></table></figure>
+
+<p><img src="/posts/firewall-02-web-login-via-interface/image14.png" alt="配置接口 IP 地址 10.1.2.1&#x2F;24"></p>
+<h2 id="将接口加入-Trust-区域"><a href="#将接口加入-Trust-区域" class="headerlink" title="将接口加入 Trust 区域"></a>将接口加入 Trust 区域</h2><p>这一步是业务口和管理口的<strong>本质差异</strong>：防火墙只检查「区域之间」的流量，接口必须先划入某个安全区域，才有资格参与安全策略的检查。进入受信任区域（trust），把 GE1&#x2F;0&#x2F;0 加进去：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image15.png" alt="将 GE1&#x2F;0&#x2F;0 加入 trust 区域"></p>
+<p>trust 是受信任区域，优先级仅次于防火墙本机（local）。把我们自己的管理流量从 trust 区域发往防火墙自身，方向就是 trust → local。</p>
+<h2 id="配置-VTY-登录与-AAA-账号"><a href="#配置-VTY-登录与-AAA-账号" class="headerlink" title="配置 VTY 登录与 AAA 账号"></a>配置 VTY 登录与 AAA 账号</h2><p>Web 界面之外，先把命令行的远程登录底座打好。进入 VTY 视图（虚拟终端），<code>0 4</code> 表示 0 到 4 共 5 路，也就是允许 5 个用户同时远程登录：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image16.png" alt="VTY 视图允许 5 个用户登录"></p>
+<p>把登录用户的等级设为 3 级。华为设备的命令行等级从 0 到 3（访问级、监控级、配置级、管理级），3 级是最高级，能进系统视图做全部配置：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image17.png" alt="设置登录用户等级 level 3"></p>
+<p>然后进入 AAA 认证视图，创建登录账号：用户名 <code>whx</code>、密码 <code>whx@123456</code>、等级 3 级。AAA 负责三件事——认证（Authentication，你是谁）、授权（Authorization，你能干什么）、审计（Accounting，你干过什么）：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image18.png" alt="AAA 创建用户 whx 并设置密码与等级"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image19.png" alt="AAA 用户密码配置"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image20.png" alt="AAA 用户等级配置"></p>
+<p>创建好的用户还要开启 Web 登录服务，再添加到系统用户里，赋予管理员角色——否则账号虽然存在，却没有登录 Web 界面的权限：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image21.png" alt="允许 whx 用户 Web 登录"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image22.png" alt="将 whx 用户添加到系统用户"></p>
+<h2 id="浏览器登录验证"><a href="#浏览器登录验证" class="headerlink" title="浏览器登录验证"></a>浏览器登录验证</h2><p>在浏览器地址栏输入 <code>https://10.1.2.1:8443</code>，这次用刚创建的 <code>whx</code> 账号登录：</p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image23.png" alt="浏览器访问 https:&#x2F;&#x2F;10.1.2.1:8443"></p>
+<p><img src="/posts/firewall-02-web-login-via-interface/image24.png" alt="成功通过业务口进入 Web 管理界面"></p>
+<div class="note info flat"><p>对比两篇的差异就是业务口管理的完整清单：<strong>接口 IP</strong>、<strong>service-manage 服务放行</strong>、<strong>划入安全区域</strong>、<strong>AAA 账号授权</strong>。管理口出厂替你做好了后两项，业务口则要自己动手——少任何一步，Web 页面都打不开。</p>
+</div>
+]]></content>
+      <categories>
+        <category>防火墙</category>
+      </categories>
+      <tags>
+        <tag>华为</tag>
+        <tag>eNSP</tag>
+        <tag>防火墙</tag>
       </tags>
   </entry>
   <entry>
@@ -352,5 +461,81 @@
 
 <p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
 ]]></content>
+  </entry>
+  <entry>
+    <title>Python学习（一）：程序设计基本方法</title>
+    <url>/posts/python-01-programming-basics/</url>
+    <content><![CDATA[<p>学任何一门语言都绕不开开头的概念课：它是谁发明的、凭什么流行、代码怎么写才算规范。这篇把 Python 的「身份证」和「基本法」一次理清：语言特性、编译与解释、注释与命名、保留字、数据类型，最后是程序编写的基本框架 IPO。</p>
+<span id="more"></span>
+
+<h2 id="Python-是一门什么样的语言"><a href="#Python-是一门什么样的语言" class="headerlink" title="Python 是一门什么样的语言"></a>Python 是一门什么样的语言</h2><p>Python 由荷兰人 <strong>Guido van Rossum</strong> 创立。它是目前最受欢迎的编程语言之一，五个标签可以概括它的身份：</p>
+<ul>
+<li><strong>通用语言</strong>：能写脚本、爬虫、Web、数据分析、人工智能，几乎无处不在；</li>
+<li><strong>解释性语言</strong>：代码由解释器逐句执行，不用编译成二进制，写完就能跑；</li>
+<li><strong>开源语言</strong>：源码开放，任何人都可以参与和贡献；</li>
+<li><strong>跨平台语言</strong>：同一份代码可以在 Windows、Linux、macOS 上运行；</li>
+<li><strong>多范式语言</strong>：面向过程、面向对象、函数式，想用哪种风格都行。</li>
+</ul>
+<h2 id="为什么选-Python"><a href="#为什么选-Python" class="headerlink" title="为什么选 Python"></a>为什么选 Python</h2><p>两条主线：<strong>语法简洁</strong>和<strong>生态高产</strong>。</p>
+<p>语法层面，完成同样功能 Python 的代码量大约只有 C 语言的 10%，语法强制可读性（缩进即语法），底层语法元素少，支持多种编程方式，还直接支持中文字符。</p>
+<p>生态层面，PyPI 上有超过 50 万个第三方库，计算生态增长极快——大多数问题别人已经写好了轮子，<code>import</code> 一下就能用。开放共享、跨操作系统平台，让”避免重复造轮子”成了 Python 社区的默认文化。</p>
+<h2 id="编译和解释"><a href="#编译和解释" class="headerlink" title="编译和解释"></a>编译和解释</h2><p>按执行方式，编程语言分两大类：</p>
+<ul>
+<li><strong>静态语言</strong>（编译型，如 C&#x2F;C++）：源代码先经编译器<strong>一次性</strong>翻译成目标代码，之后执行的都是目标代码，速度快；</li>
+<li><strong>脚本语言</strong>（解释型，如 Python）：源代码由解释器<strong>逐句</strong>翻译并立即执行，每次运行都要重新解释，但天然跨平台、灵活。</li>
+</ul>
+<p><img src="/posts/python-01-programming-basics/image1.png" alt="编译型与解释型语言的执行方式对比"></p>
+<h2 id="注释的写法"><a href="#注释的写法" class="headerlink" title="注释的写法"></a>注释的写法</h2><p>Python 用 <code>#</code> 开头写单行注释；需要成段的说明文字时，用三引号包裹多行注释。注释不参与程序执行，是写给”未来的自己和其他人”看的：</p>
+<p><img src="/posts/python-01-programming-basics/image2.png" alt="Python 注释的写法：单行注释与多行注释"></p>
+<h2 id="命名规则"><a href="#命名规则" class="headerlink" title="命名规则"></a>命名规则</h2><p>给变量、函数起名字，可以用<strong>大小写字母、数字、下划线和中文等字符及组合</strong>，但有三条红线：</p>
+<ol>
+<li><strong>大小写敏感</strong>——<code>name</code> 和 <code>Name</code> 是两个不同的名字；</li>
+<li><strong>首字符不能是数字</strong>；</li>
+<li><strong>不能与保留字相同</strong>。</li>
+</ol>
+<h2 id="保留字（关键字）"><a href="#保留字（关键字）" class="headerlink" title="保留字（关键字）"></a>保留字（关键字）</h2><p>Python 有 <strong>35 个保留字</strong>，它们是语言的基本单词，被语法本身占用，不能拿来当变量名。同样因为大小写敏感，<code>if</code> 是保留字，而 <code>If</code> 只是一个普通变量名——这个例子最能说明保留字规则：</p>
+<p><img src="/posts/python-01-programming-basics/image3.png" alt="Python 的 35 个保留字一览"></p>
+<h2 id="数据类型"><a href="#数据类型" class="headerlink" title="数据类型"></a>数据类型</h2><p>同一串数字 <code>10,011,101</code>，套上不同的”外壳”就是完全不同的类型：</p>
+<table>
+<thead>
+<tr>
+<th>写法</th>
+<th>类型</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>10011101</code></td>
+<td>整数</td>
+<td>一个普通整数</td>
+</tr>
+<tr>
+<td><code>&quot;10,011,101&quot;</code></td>
+<td>字符串</td>
+<td>一串文本字符</td>
+</tr>
+<tr>
+<td><code>[10, 011, 101]</code></td>
+<td>列表</td>
+<td>一组有序元素</td>
+</tr>
+</tbody></table>
+<p>程序怎么理解一串数据，取决于你给它什么类型——这是强类型语言的基石。</p>
+<h2 id="程序的基本编写方法（IPO）"><a href="#程序的基本编写方法（IPO）" class="headerlink" title="程序的基本编写方法（IPO）"></a>程序的基本编写方法（IPO）</h2><p>再复杂的程序，都可以拆成三段式结构，这就是 <strong>IPO 模型</strong>：</p>
+<ul>
+<li><strong>输入（Input）</strong>：程序的开端。可以来自交互输入（<code>input()</code>）、文件、网络，也可以是程序参数；</li>
+<li><strong>处理（Process）</strong>：程序的核心，也就是<strong>算法</strong>——把输入加工成输出的一步步逻辑；</li>
+<li><strong>输出（Output）</strong>：程序展示成果的方式，打印到控制台、写文件、显示图形界面都算。</li>
+</ul>
+<p>写程序前先想清楚”输入是什么、输出要什么、中间怎么算”，思路会比直接动手敲代码清晰得多。</p>
+<div class="note info flat"><p>这一篇是整个 Python 系列的地基：35 个保留字是语法的”单词表”，IPO 是程序的”句型”。下一篇开始动手写代码，这些概念会反复出现。</p>
+</div>
+]]></content>
+      <categories>
+        <category>Python</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+      </tags>
   </entry>
 </search>
